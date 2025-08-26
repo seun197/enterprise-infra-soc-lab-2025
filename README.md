@@ -7,7 +7,7 @@ designing, implementing, breaking/fixing, and proving the core controls that sec
 
 ---
 
-## 🌍 Architecture
+## Architecture
 ![Topology](docs/topology.png)
 
 - **pfSense** → Firewall, NAT, VPN Gateway (`192.168.100.1`)  
@@ -19,7 +19,7 @@ designing, implementing, breaking/fixing, and proving the core controls that sec
 
 ---
 
-## 🎯 Security Objectives
+## Security Objectives
 1. **Perimeter Control** → pfSense firewall rules enforce order, block traffic, log events.  
 2. **Identity & Authentication** → Active Directory with Kerberos tickets validated at client + DC.  
 3. **Access Control** → Group-based NTFS permissions on hidden share (`Finance$`).  
@@ -28,7 +28,7 @@ designing, implementing, breaking/fixing, and proving the core controls that sec
 
 ---
 
-## 📊 Implementation Proofs
+## Implementation Proofs
 
 ### 1. Networking – DHCP & DNS
 - **Problem:** Without DHCP/DNS, clients fall to APIPA and domain resolution fails.  
@@ -105,7 +105,7 @@ designing, implementing, breaking/fixing, and proving the core controls that sec
 
 ---
 
-## 🧯 Break → Symptom → Fix
+## Break → Symptom → Fix
 - DHCP off → Clients get APIPA `169.254.x.x` → Restart DHCP → renew lease.  
 - DNS wrong → `srv.lab.local` fails → Reset DNS to `192.168.100.10`.  
 - Missing gateway → LAN OK, Internet dead → Restore pfSense `.1`.  
@@ -114,7 +114,7 @@ designing, implementing, breaking/fixing, and proving the core controls that sec
 
 ---
 
-## 🛡️ Detection Scenarios
+## Detection Scenarios
 - **Baseline:** Normal Kerberos ticket issuance confirmed (`klist` + DC logs).  
 - **Attack:** Brute-force from Kali → surge of 4625 failed logons.  
 - **Response:** Correlated Sysmon Event ID 1 (powershell.exe) with failed logons.  
@@ -122,7 +122,7 @@ designing, implementing, breaking/fixing, and proving the core controls that sec
 
 ---
 
-## 📚 Lessons Learned
+## Lessons Learned
 - DNS is the backbone of AD authentication.  
 - Firewall rule **order** determines control.  
 - Group-based access (AGDLP) is scalable; per-user ACLs break.  
@@ -131,7 +131,7 @@ designing, implementing, breaking/fixing, and proving the core controls that sec
 
 ---
 
-## 🎓 Skills Demonstrated
+## Skills Demonstrated
 - **Identity & Access:** AD DS, Kerberos, NTFS, OUs, Groups  
 - **Networking:** DHCP, DNS, NAT, routing, VPN  
 - **Perimeter:** pfSense firewall rule design + logs  
@@ -141,7 +141,7 @@ designing, implementing, breaking/fixing, and proving the core controls that sec
 
 ---
 
-## ⚠️ Ethics
+## ⚠Ethics
 All offensive simulations (nmap, brute-force) were executed only in an **isolated lab environment**.  
 No production systems were targeted.
 
