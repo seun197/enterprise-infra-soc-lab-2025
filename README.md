@@ -1,115 +1,135 @@
-# Contract-Grade AD Security Lab (2025)
+# Enterprise Infrastructure SOC Lab (2025)
 
-**Stack:** pfSense (firewall+VPN), Windows Server (AD/DNS/DHCP), Windows 10 client, Ubuntu client, Kali attacker.  
-**Proof-first:** every claim backed by packets, logs, and screenshots.
+**Firewall, Identity, VPN, Access Control, Visibility — designed, implemented, and proven in a controlled lab.**
 
----
-
-## 📌 Why this lab matters
-- Networking: proved with DHCP DORA, DNS resolution, and pfSense firewall control.  
-- Identity: built a real AD forest with OUs, users, groups, and group-based access.  
-- Authentication: captured Kerberos tickets (TGT/TGS) + Event IDs (4768/4769/4624).  
-- Remote Access: pfSense OpenVPN into the lab, verified with share access.  
-- Visibility: deployed Sysmon + auditing, showed brute-force detection (4625).  
-
+This project simulates a corporate environment to demonstrate **end-to-end security engineering fundamentals**:  
+designing, implementing, breaking/fixing, and proving the core controls a security engineer or SOC analyst depends on.
 
 ---
 
-# 📂 Architecture
-![Diagram](docs/diagram_lab_topology.png)
+## 🌍 Architecture
+![Topology](docs/diagram_lab_topology.png)
 
-- pfSense router/NAT/VPN (LAN `192.168.100.0/24`, gateway `.1`)
-- Windows Server DC/DNS/DHCP (`192.168.100.10`)
-- Windows 10 client (joined to domain)
-- Ubuntu client (Linux fundamentals & DNS/route tests)
-- Kali attacker (nmap/tcpdump brute-force)
-- SMB share: `\\srv.lab.local\Finance$` (hidden, group-based permissions)
-
----
-
-# 🔑 Proof of Work (Problem → Action → Solution)
-
-## 1) DHCP – proving leases
-**Problem:** New clients sometimes got APIPA (`169.254.x.x`).  
-**Action:** Captured DHCP traffic during `ipconfig /renew`.  
-**Solution:** Full DORA (Discover/Offer/Request/Ack) from DC.  
-**Evidence:** ![DHCP DORA](screenshots/01_dhcp_dora_wireshark.png)
+- **pfSense** → Firewall, NAT, VPN Gateway (`192.168.100.1`)  
+- **SRV-CORE** → Windows Server 2019 DC/DNS/DHCP/File (`192.168.100.10`)  
+- **WIN10-CLI** → Domain workstation + Wireshark endpoint  
+- **UBU-CLI** → Linux client (network/DNS drills)  
+- **KALI-ATT** → Attacker VM (nmap, brute-force, tcpdump)  
+- **VPN** → OpenVPN (`10.8.0.0/24` → push route to 192.168.100.0/24)  
 
 ---
 
-## 2) DNS – the glue of AD
-**Problem:** `\\srv.lab.local\Finance$` failed without DNS.  
-**Action:** Set client DNS to DC; ran `nslookup`.  
-**Solution:** `srv.lab.local → 192.168.100.10`.  
-**Evidence:** ![DNS](screenshots/02_dns_nslookup_srv_lab_local.png)
+## 🎯 Security Objectives
+1. **Perimeter Control** → pfSense firewall enforces rule order, logs blocked traffic.  
+2. **Identity & Authentication** → Active Directory with Kerberos tickets validated at client + DC.  
+3. **Access Control** → Group-based NTFS permissions on hidden share (`Finance$`).  
+4. **Remote Access** → VPN tunnel provides controlled access to corporate subnet.  
+5. **Visibility & Detection** → Sysmon telemetry, Windows audit policy, Wireshark captures.  
 
 ---
 
-## 3) Firewall – pfSense actually blocks
-**Problem:** Needed proof that perimeter rules worked.  
-**Action:** Added top rule to block ICMP; pinged from client.  
-**Solution:** pfSense logs show ICMP blocked/allowed by rule order.  
-**Evidence:** ![Firewall](screenshots/03_pfsense_firewall_log_icmp_blocks.png)
+## 📊 Implementation Proofs
+
+### 1. Networking – DHCP & DNS
+- **Problem:** Clients fall back to APIPA (`169.254.x.x`) if DHCP/DNS fail.  
+- **Action:** Captured **DORA handshake** in Wireshark; ran `nslookup srv.lab.local`.  
+- **Solution:** Verified DC issued leases and resolved names correctly.  
+- **Evidence:**  
+  - `pcaps/dhcp_dora_wireshark.pcapng`  
+  - `screenshots/dns_nslookup_srv_lab_local.png`
+
+### 2. Perimeter Security – Firewall
+- **Problem:** Needed to prove firewall enforcement beyond defaults.  
+- **Action:** Added pfSense rule to **block ICMP** above allow-any.  
+- **Solution:** Client pings dropped; pfSense firewall log confirmed.  
+- **Evidence:** `screenshots/pfsense_firewall_log_icmp_blocks.png`
+
+### 3. Identity – Active Directory OUs
+- **Problem:** Group Policy doesn’t apply in default *Computers* container.  
+- **Action:** Created **Workstations OU**, moved WIN10-CLI object.  
+- **Solution:** Policies scoped cleanly for workstations.  
+- **Evidence:** `screenshots/aduc_ous_with_win10-cli_in_workstations.png`
+
+### 4. Access Control – Group-based NTFS
+- **Problem:** Finance share required least privilege, auditable access.  
+- **Action:** Created hidden share `Finance$`; applied **GG_Finance_RW** group permissions.  
+- **Solution:**  
+  - Alice (in group) → write access  
+  - Bob (not in group) → denied  
+  - Bob (added later) → access granted  
+- **Evidence:**  
+  - `screenshots/financeshare_alice_access.png`  
+  - `screenshots/financeshare_bob_access_denied.png`  
+  - `screenshots/financeshare_bob_access_after_group_add.png`
+
+### 5. Authentication – Kerberos
+- **Problem:** Needed proof of Kerberos, not NTLM.  
+- **Action:** On client → ran `klist` before/after accessing share. On DC → filtered logs.  
+- **Solution:**  
+  - Client showed **TGT + TGS (`cifs/srv.lab.local`)**  
+  - DC logged **4768/4769/4624** events  
+- **Evidence:**  
+  - `screenshots/win10-cli_klist_tgt_tgs.png`  
+  - `screenshots/eventviewer_security_4768_4769_4624.png`
+
+### 6. Remote Access – VPN
+- **Problem:** Off-LAN users needed secure route into corporate subnet.  
+- **Action:** Configured pfSense OpenVPN (tun/Wintun, pushed LAN route).  
+- **Solution:** Share only reachable while VPN connected.  
+- **Evidence:** `screenshots/pfsense_openvpn_status_connected.png`
+
+### 7. Visibility – Sysmon & Brute-Force
+- **Problem:** Needed detection visibility on endpoints.  
+- **Action:** Deployed **Sysmon**; simulated brute-force with Hydra.  
+- **Solution:**  
+  - Sysmon logged **Event ID 1 (process creation)**  
+  - DC Security log filled with **4625 failed logons**  
+- **Evidence:**  
+  - `screenshots/sysmon_eventid1_process_creation.png`  
+  - `screenshots/eventviewer_security_4625_failed_logons.png`
 
 ---
 
-## 4) Active Directory – structured OUs
-**Problem:** GPOs don’t apply in default Computers container.  
-**Action:** Created `Workstations`, `Users`, `Groups`; moved WIN10-CLI to Workstations.  
-**Solution:** Clean AD structure, scoped policies apply.  
-**Evidence:** ![ADUC](screenshots/04_aduc_ous_with_win10-cli_in_workstations.png)
+## 🧯 Break → Symptom → Fix
+- DHCP off → APIPA lease → restart DHCP → renew = valid lease.  
+- DNS mispointed → `srv.lab.local` fails → reset DNS to `192.168.100.10`.  
+- No gateway → LAN OK, Internet dead → restore pfSense `.1`.  
+- Kerberos fail → time skew >5 mins → resync NTP, fix DNS.  
+- Firewall rule order → block below allow ineffective → move rule above allow-any.  
 
 ---
 
-## 5) Access Control – group-based SMB
-**Problem:** Needed least-privilege proof on share.  
-**Action:** NTFS + hidden share `Finance$`; Alice in `GG_Finance_RW`, Bob not.  
-**Solution:** Alice allowed, Bob denied → group membership flips access.  
-**Evidence:**  
-- ![Alice access](screenshots/05_financeshare_alice_access.png)  
-- ![Bob denied](screenshots/06_financeshare_bob_access_denied.png)
+## 🛡️ Detection Scenarios
+- **Baseline:** Normal Kerberos ticket flow captured in packets + logs.  
+- **Attack:** Brute-force from Kali → 4625 storm generated.  
+- **Response:** Correlated Sysmon Event ID 1 (powershell.exe) with failed logon events.  
+- **Outcome:** Validated detection pipeline from endpoint → DC → firewall.  
 
 ---
 
-## 6) Kerberos – tickets are real
-**Problem:** Must prove AD auth wasn’t NTLM.  
-**Action:** Ran `klist` before/after accessing share; checked DC logs.  
-**Solution:** TGT + TGS (`cifs/srv.lab.local`) issued; DC logs show 4768/4769/4624.  
-**Evidence:**  
-- ![klist before](screenshots/07.1_klist_before.png)  
-- ![klist after](screenshots/07.2_win10-cli_klist_tgt_tgs.png)  
-- ![Event Logs](screenshots/08_eventviewer_security_4768_4769_4624.png)
+## 📚 Lessons Learned
+- DNS is the backbone of AD security.  
+- Firewall rule **order** = security enforcement.  
+- Group-based permissions (AGDLP) scale; per-user ACLs fail.  
+- Packet capture validates what logs only imply.  
+- Visibility (Sysmon + audit) is mandatory to catch brute-force noise.  
 
 ---
 
-## 7) VPN – remote access works
-**Problem:** Needed secure off-LAN access.  
-**Action:** pfSense OpenVPN with push route to `192.168.100.0/24`.  
-**Solution:** Tunnel connected; share only accessible with VPN up.  
-**Evidence:** ![VPN](screenshots/09.1_pfsense_openvpn_status_connected.png)
+## 🎓 Skills Demonstrated
+- **Identity & Access:** AD DS, Kerberos, NTFS, OUs, Groups  
+- **Networking:** DHCP, DNS, NAT, routing, VPN  
+- **Perimeter:** pfSense firewall, rule design, logging  
+- **Endpoint Visibility:** Sysmon, Windows audit policies  
+- **Detection Engineering:** Brute-force & Kerberos monitoring  
+- **Troubleshooting:** Break/fix drills under pressure  
 
 ---
 
-## 8) Visibility – Sysmon + brute force
-**Problem:** Native audit logs miss attacker noise.  
-**Action:** Installed Sysmon (SwiftOnSecurity config) + ran Hydra brute force from Kali.  
-**Solution:**  
-- Sysmon Event ID 1 captured `notepad.exe` run by domain user.  
-- DC logs showed wave of 4625 failed logons.  
-**Evidence:**  
-- ![Sysmon](screenshots/10_sysmon_eventid1_process_creation.png)  
-- ![4625 failures](screenshots/11.1_eventviewer_security_4625_failed_logons.png)  
-- ![More 4625s](screenshots/11.2_eventviewer_security_4625_failed_logons.png)
+## ⚠️ Ethics
+All offensive tools (nmap, brute-force) were executed only in an **isolated lab environment**.  
+No production systems were targeted.
 
 ---
 
-# 🧾 Lessons Learned
-- **DNS is life**: break it, and Kerberos + shares collapse.  
-- **Groups > Users**: access control scales only through AGDLP.  
-- **Firewall rule order matters**: block above allow or it’s useless.  
-- **Packets don’t lie**: DHCP DORA + Kerberos TGS are indisputable proof.  
-
----
-
-# 📂 Repo structure
-
+*© 2025 – Enterprise Infrastructure SOC Lab: proving design, implementation, and validation of security controls.*
