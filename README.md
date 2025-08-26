@@ -8,7 +8,7 @@ designing, implementing, breaking/fixing, and proving the core controls that sec
 ---
 
 ## 🌍 Architecture
-![Topology](docs/diagram_lab_topology.png)
+![Topology](docs/topology.png)
 
 - **pfSense** → Firewall, NAT, VPN Gateway (`192.168.100.1`)  
 - **SRV-CORE** → Windows Server 2019 (AD DS, DNS, DHCP, File Services) (`192.168.100.10`)  
