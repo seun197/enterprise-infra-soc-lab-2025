@@ -1,9 +1,9 @@
-# Enterprise Infrastructure SOC Lab (2025)
+# Enterprise Infrastructure Security Engineer Lab (2025)
 
 **Firewall, Identity, VPN, Access Control, Visibility — designed, implemented, and proven in a controlled lab.**
 
 This project simulates a miniature corporate infrastructure to demonstrate **end-to-end security engineering fundamentals**:  
-designing, implementing, breaking/fixing, and proving the core controls that security engineers and SOC analysts depend on.
+designing, implementing, breaking/fixing, and proving the core controls that security engineers depend on.
 
 ---
 
